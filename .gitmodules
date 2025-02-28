@@ -1,0 +1,9 @@
+[submodule "lib/argparse"]
+	path = lib/argparse
+	url = https://github.com/p-ranav/argparse
+[submodule "lib/pugixml"]
+	path = lib/pugixml
+	url = https://github.com/zeux/pugixml
+[submodule "lib/uuid_v4"]
+	path = lib/uuid_v4
+	url = https://github.com/crashoz/uuid_v4
