@@ -5,6 +5,7 @@
 #include <pugixml.hpp>
 #include <string>
 #include <unordered_map>
+#include "typing.hpp"
 
 namespace xmltools {
 
@@ -53,6 +54,9 @@ namespace xmltools {
         std::string name,
         std::string category
     );
+
+    // Парсит тип из узла SUPER
+    typing::Type* parseTypeNode(pugi::xml_node node);
 }
 
 #endif

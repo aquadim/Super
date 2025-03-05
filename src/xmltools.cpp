@@ -88,4 +88,20 @@ namespace xmltools {
         generatedTypeNode.append_child("xr:TypeId").text().set(ids::getUUID());
         generatedTypeNode.append_child("xr:ValueId").text().set(ids::getUUID());
     }
+
+    typing::Type* parseTypeNode(pugi::xml_node node) {
+        std::string typeId = node.attribute("id").as_string();
+
+        // Если это строка
+        if (typeId == "std::string") {
+            return new typing::String(
+                node.attribute("length").as_int(),
+                node.attribute("isVariable").as_bool(false)
+            );
+        }
+
+        // Не понимаем что за тип
+        std::cerr << "Неизвестный тип " + typeId << std::endl;
+        return new typing::Type(typeId);
+    }
 }

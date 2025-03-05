@@ -74,6 +74,39 @@ void handleCatalog(fs::path dumpRootPath, pugi::xml_node config, std::string obj
 
     // -- ChildObjects --
     pugi::xml_node childObjects = catalogNode.append_child("ChildObjects");
+    // Свойства
+    for (
+        pugi::xml_node propertyNode = config.child("properties").child("property");
+        propertyNode;
+        propertyNode = propertyNode.next_sibling("property")
+    )
+    {
+        // <Attribute>
+        pugi::xml_node attributeNode = childObjects.append_child("Attribute");
+        attributeNode.append_attribute("uuid").set_value(ids::getUUID());
+
+        // <Properties>
+        pugi::xml_node attributePropsNode = attributeNode.append_child("Properties");
+        // Название свойства
+        xmltools::addNameNode(
+            attributePropsNode,
+            propertyNode.attribute("id").as_string()
+        );
+        // Синоним
+        xmltools::addLocalisedString(
+            attributePropsNode.append_child("Synonym"),
+            xmltools::parseLocalisedString(propertyNode.child("synonym").child("localised-string"))
+        );
+        // Комментарий
+        xmltools::addCommentNode(
+            attributePropsNode,
+            propertyNode.child("comment").text().get()
+        );
+        // Тип
+        auto type = xmltools::parseTypeNode(propertyNode.child("type"));
+        type->addTypeNode(attributePropsNode);
+        delete type;
+    }
 
     catalog.save_file((dumpRootPath / "Catalogs" / (objectId + ".xml")).c_str());
 }
