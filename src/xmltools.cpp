@@ -2,8 +2,17 @@
 #include "ids.hpp"
 
 namespace xmltools {
+
+    void addSubNode(pugi::xml_node node, std::string name, std::string value) {
+        node.append_child(name).text().set(value.c_str());
+    }
+    
     void addNameNode(pugi::xml_node node, std::string value) {
-        node.append_child("Name").text().set(value.c_str());
+        addSubNode(node, "Name", value);
+    }
+    
+    void addCommentNode(pugi::xml_node node, std::string value) {
+        addSubNode(node, "Comment", value);
     }
     
     void addConfigVersion(
@@ -65,5 +74,18 @@ namespace xmltools {
             v8item.append_child("v8:lang").text().set(it.first);
             v8item.append_child("v8:content").text().set(it.second);
         }
+    }
+
+    void addGeneratedType(
+        pugi::xml_node node,
+        std::string name,
+        std::string category
+    )
+    {
+        pugi::xml_node generatedTypeNode = node.append_child("xr:GeneratedType");
+        generatedTypeNode.append_attribute("name").set_value(name);
+        generatedTypeNode.append_attribute("category").set_value(category);
+        generatedTypeNode.append_child("xr:TypeId").text().set(ids::getUUID());
+        generatedTypeNode.append_child("xr:ValueId").text().set(ids::getUUID());
     }
 }

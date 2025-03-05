@@ -7,6 +7,13 @@
 
 namespace fs = std::filesystem;
 
+// Добавляет ContainedObject в <InternalInfo> конфигурации
+void addContainedObject(pugi::xml_node node, std::string uuid) {
+    pugi::xml_node containedObject = node.append_child("xr:ContainedObject");
+    containedObject.append_child("xr:ClassId").text().set(uuid);
+    containedObject.append_child("xr:ObjectId").text().set(ids::getUUID());
+}
+
 // Обработка языка
 void handleLanguage(fs::path dumpRootPath, pugi::xml_node config, std::string objectId) {
     pugi::xml_document language;
@@ -18,21 +25,16 @@ void handleLanguage(fs::path dumpRootPath, pugi::xml_node config, std::string ob
 
     pugi::xml_node propsNode = languageNode.append_child("Properties");
 
+    // -- Properties --
     // Name
-    propsNode.append_child("Name").text().set(objectId);
-
+    xmltools::addNameNode(propsNode, objectId);
     // Synonym
     xmltools::addLocalisedString(
         propsNode.append_child("Synonym"),
         xmltools::parseLocalisedString(config.child("synonym").child("localised-string"))
     );
-    
     // Comment
-    xmltools::addLocalisedString(
-        propsNode.append_child("Comment"),
-        xmltools::parseLocalisedString(config.child("comment").child("localised-string"))
-    );
-
+    xmltools::addCommentNode(propsNode, config.child("comment").text().get());
     // LanguageCode
     propsNode.append_child("LanguageCode").text().set(
         config.child("code").text().get()
@@ -50,22 +52,28 @@ void handleCatalog(fs::path dumpRootPath, pugi::xml_node config, std::string obj
     pugi::xml_node catalogNode = metadataNode.append_child("Catalog");
     catalogNode.append_attribute("uuid").set_value(ids::getUUID());
 
+    // -- InternalInfo --
+    pugi::xml_node internalInfoNode = catalogNode.append_child("InternalInfo");
+    xmltools::addGeneratedType(internalInfoNode,"CatalogObject."+objectId,"Object");
+    xmltools::addGeneratedType(internalInfoNode,"CatalogRef."+objectId,"Ref");
+    xmltools::addGeneratedType(internalInfoNode,"CatalogSelection."+objectId,"Selection");
+    xmltools::addGeneratedType(internalInfoNode,"CatalogList."+objectId,"List");
+    xmltools::addGeneratedType(internalInfoNode,"CatalogManager."+objectId,"Manager");
+    
+    // -- Properties --
     pugi::xml_node propsNode = catalogNode.append_child("Properties");
-
     // Name
-    propsNode.append_child("Name").text().set(objectId);
-
+    xmltools::addNameNode(propsNode, objectId);
     // Synonym
     xmltools::addLocalisedString(
         propsNode.append_child("Synonym"),
         xmltools::parseLocalisedString(config.child("synonym").child("localised-string"))
     );
-    
     // Comment
-    xmltools::addLocalisedString(
-        propsNode.append_child("Comment"),
-        xmltools::parseLocalisedString(config.child("comment").child("localised-string"))
-    );
+    xmltools::addCommentNode(propsNode, config.child("comment").text().get());
+
+    // -- ChildObjects --
+    pugi::xml_node childObjects = catalogNode.append_child("ChildObjects");
 
     catalog.save_file((dumpRootPath / "Catalogs" / (objectId + ".xml")).c_str());
 }
@@ -155,12 +163,29 @@ int main(int argc, char* argv[]) {
     // ConfigDumpInfo.xml
     pugi::xml_document configDumpInfoXML;
     pugi::xml_node configDumpInfo       = configDumpInfoXML.append_child("ConfigDumpInfo");
+    configDumpInfo.append_attribute("xmlns").set_value("http://v8.1c.ru/8.3/xcf/dumpinfo");
+    configDumpInfo.append_attribute("xmlns:xen").set_value("http://v8.1c.ru/8.3/xcf/enums");
+    configDumpInfo.append_attribute("xmlns:xs").set_value("http://www.w3.org/2001/XMLSchema");
+    configDumpInfo.append_attribute("xmlns:xsi").set_value("http://www.w3.org/2001/XMLSchema-instance");
+    configDumpInfo.append_attribute("format").set_value("Hierarchical");
+    configDumpInfo.append_attribute("version").set_value("2.18");
     pugi::xml_node configVersionsNode   = configDumpInfo.append_child("ConfigVersions");
 
     // Configuration.xml
     pugi::xml_document configurationXML;
-    pugi::xml_node configurationMetaNode        = configurationXML.append_child("MetaDataObject");
-    pugi::xml_node configurationNode            = configurationMetaNode.append_child("Configuration");
+    pugi::xml_node configurationMetaNode    = configurationXML.append_child("MetaDataObject");
+    pugi::xml_node configurationNode        = configurationMetaNode.append_child("Configuration");
+    
+    // Configuration -- InternalInfo
+    pugi::xml_node configurationInternalInfoNode = configurationNode.append_child("InternalInfo");
+    addContainedObject(configurationInternalInfoNode, "9cd510cd-abfc-11d4-9434-004095e12fc7");
+    addContainedObject(configurationInternalInfoNode, "9fcd25a0-4822-11d4-9414-008048da11f9");
+    addContainedObject(configurationInternalInfoNode, "e3687481-0a87-462c-a166-9f34594f9bba");
+    addContainedObject(configurationInternalInfoNode, "9de14907-ec23-4a07-96f0-85521cb6b53b");
+    addContainedObject(configurationInternalInfoNode, "51f2d5d8-ea4d-4064-8892-82951750031e");
+    addContainedObject(configurationInternalInfoNode, "e68182ea-4237-4383-967f-90c1e3370bc7");
+    addContainedObject(configurationInternalInfoNode, "fb282519-d103-4dd3-bc12-cb271d631dfc");
+
     pugi::xml_node configurationPropertiesNode  = configurationNode.append_child("Properties");
     pugi::xml_node configurationChildrenNode    = configurationNode.append_child("ChildObjects");
 

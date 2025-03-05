@@ -6,9 +6,16 @@
 #include <string>
 #include <unordered_map>
 
-namespace xmltools {    
+namespace xmltools {
+
+    // Добавляет под-узел
+    void addSubNode(pugi::xml_node node, std::string name, std::string value);
+    
     // Добавляет <Name> в узел XML
     void addNameNode(pugi::xml_node node, std::string value);
+    
+    // Добавляет <Comment> в узел XML
+    void addCommentNode(pugi::xml_node node, std::string value);
 
     // Добавляет в узел версий запись об объекте
     // configVersions - узел версий
@@ -38,6 +45,13 @@ namespace xmltools {
     void addLocalisedString(
         pugi::xml_node node,
         std::unordered_map<std::string, std::string> langMap
+    );
+
+    // Добавляет узел GeneratedType для родителя "InternalInfo"
+    void addGeneratedType(
+        pugi::xml_node node,
+        std::string name,
+        std::string category
     );
 }
 
