@@ -72,8 +72,8 @@ void handleCatalog(fs::path dumpRootPath, pugi::xml_node config, std::string obj
     // Comment
     xmltools::addCommentNode(propsNode, config.child("comment").text().get());
 
-    // -- ChildObjects --
-    pugi::xml_node childObjects = catalogNode.append_child("ChildObjects");
+    // <ChildObjects>
+    pugi::xml_node childObjectsNode = catalogNode.append_child("ChildObjects");
     // Свойства
     for (
         pugi::xml_node propertyNode = config.child("properties").child("property");
@@ -82,7 +82,7 @@ void handleCatalog(fs::path dumpRootPath, pugi::xml_node config, std::string obj
     )
     {
         // <Attribute>
-        pugi::xml_node attributeNode = childObjects.append_child("Attribute");
+        pugi::xml_node attributeNode = childObjectsNode.append_child("Attribute");
         attributeNode.append_attribute("uuid").set_value(ids::getUUID());
 
         // <Properties>
@@ -103,9 +103,48 @@ void handleCatalog(fs::path dumpRootPath, pugi::xml_node config, std::string obj
             propertyNode.child("comment").text().get()
         );
         // Тип
-        auto type = xmltools::parseTypeNode(propertyNode.child("type"));
+        typing::Type* type = xmltools::parseTypeNode(propertyNode.child("type"));
         type->addTypeNode(attributePropsNode);
         delete type;
+    }
+    // Табличные части
+    for (
+        pugi::xml_node tabularSection = config.child("tabular-sections").child("tabular-section");
+        tabularSection;
+        tabularSection = tabularSection.next_sibling("tabular-section")
+    )
+    {
+        // Имя табличной части
+        std::string tabularId = tabularSection.attribute("id").as_string();
+        
+        // <TabularSection>
+        pugi::xml_node tabularSectionNode = childObjectsNode.append_child("TabularSection");
+        tabularSectionNode.append_attribute("uuid").set_value(ids::getUUID());
+
+        // <InternalInfo>
+        pugi::xml_node tabularInternalInfoNode = tabularSectionNode.append_child("InternalInfo");
+        xmltools::addGeneratedType(
+            tabularInternalInfoNode,
+            "CatalogTabularSection."+objectId+"."+tabularId,
+            "TabularSection"
+        );
+        xmltools::addGeneratedType(
+            tabularInternalInfoNode,
+            "CatalogTabularSectionRow."+objectId+"."+tabularId,
+            "TabularSectionRow"
+        );
+
+        // <Properties>
+        pugi::xml_node tabularPropsNode = tabularSectionNode.append_child("Properties");
+        xmltools::addNameNode(tabularPropsNode, tabularId);
+        xmltools::addLocalisedString(
+            tabularPropsNode.append_child("Synonym"),
+            xmltools::parseLocalisedString(tabularSection.child("synonym").child("localised-string"))
+        );
+        xmltools::addCommentNode(
+            tabularPropsNode,
+            tabularSection.child("comment").text().get()
+        );
     }
 
     catalog.save_file((dumpRootPath / "Catalogs" / (objectId + ".xml")).c_str());

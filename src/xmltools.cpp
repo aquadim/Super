@@ -96,8 +96,45 @@ namespace xmltools {
         if (typeId == "std::string") {
             return new typing::String(
                 node.attribute("length").as_int(),
-                node.attribute("isVariable").as_bool(false)
+                node.attribute("variable").as_bool()
             );
+        }
+
+        // Если это число
+        if (typeId == "std::int") {
+            return new typing::Integer(
+                node.attribute("length").as_int(),
+                node.attribute("onlyPositive").as_bool()
+            );
+        }
+        
+        // Если это плавающее
+        if (typeId == "std::float") {
+            return new typing::Float(
+                node.attribute("length").as_int(),
+                node.attribute("fractionLength").as_int(),
+                node.attribute("onlyPositive").as_bool()
+            );
+        }
+
+        // Получить пространства имён
+        // Разделение строки https://stackoverflow.com/a/46931770/15146417
+        std::string delimiter = "::";
+        size_t posStart = 0, posEnd, delimLen = delimiter.length();
+        std::string token;
+        std::vector<std::string> tokens;
+        while ((posEnd = typeId.find(delimiter, posStart)) != std::string::npos) {
+            token = typeId.substr(posStart, posEnd - posStart);
+            posStart = posEnd + delimLen;
+            tokens.push_back(token);
+        }
+        tokens.push_back(typeId.substr(posStart));
+
+        if (tokens.size() == 3) {
+            // std::???::id
+            if (tokens[1] == "CatalogRef") {
+                return new typing::Ref("CatalogRef", tokens[2]);
+            }
         }
 
         // Не понимаем что за тип
