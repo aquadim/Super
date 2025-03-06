@@ -10,13 +10,18 @@
 namespace xmltools {
 
     // Добавляет под-узел
-    void addSubNode(pugi::xml_node node, std::string name, std::string value);
+    void addSubNode(pugi::xml_node parent, std::string name, std::string value);
     
     // Добавляет <Name> в узел XML
-    void addNameNode(pugi::xml_node node, std::string value);
+    void addNameNode(pugi::xml_node parent, std::string value);
+
+    // Добавляет <Synonym> в узел XML
+    // node - узел в который добавлять данные
+    // synonym - узел XML из настроек SUPER
+    void addSynonymNode(pugi::xml_node parent, pugi::xml_node synonym);
     
     // Добавляет <Comment> в узел XML
-    void addCommentNode(pugi::xml_node node, std::string value);
+    void addCommentNode(pugi::xml_node parent, std::string value);
 
     // Добавляет в узел версий запись об объекте
     // configVersions - узел версий

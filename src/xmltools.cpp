@@ -3,16 +3,28 @@
 
 namespace xmltools {
 
-    void addSubNode(pugi::xml_node node, std::string name, std::string value) {
-        node.append_child(name).text().set(value.c_str());
+    void addSubNode(pugi::xml_node parent, std::string name, std::string value) {
+        pugi::xml_node nameNode = parent.append_child(name);
+        if (value.size() == 0) {
+            return;
+        }
+        nameNode.text().set(value.c_str());
     }
     
-    void addNameNode(pugi::xml_node node, std::string value) {
-        addSubNode(node, "Name", value);
+    void addNameNode(pugi::xml_node parent, std::string value) {
+        addSubNode(parent, "Name", value);
+    }
+
+    void addSynonymNode(pugi::xml_node parent, pugi::xml_node synonym) {
+        pugi::xml_node synonymNode = parent.append_child("Synonym");
+        addLocalisedString(
+            synonymNode,
+            parseLocalisedString(synonym.child("localised-string"))
+        );
     }
     
-    void addCommentNode(pugi::xml_node node, std::string value) {
-        addSubNode(node, "Comment", value);
+    void addCommentNode(pugi::xml_node parent, std::string value) {
+        addSubNode(parent, "Comment", value);
     }
     
     void addConfigVersion(

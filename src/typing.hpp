@@ -1,7 +1,7 @@
 #ifndef TYPING_H
 #define TYPING_H
 
-// Структуры для хранения типов
+// Встроенные типы 1С
 #include <string>
 #include <pugixml.hpp>
 
