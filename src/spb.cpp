@@ -49,6 +49,7 @@ objects::Catalog collectCatalog(pugi::xml_node config) {
 
         auto p = objects::Property(propName, propSynonym, comment, *type);
         properties.add(p);
+        delete type;
     }
     //~ // Табличные части
     //~ for (

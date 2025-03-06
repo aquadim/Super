@@ -64,9 +64,8 @@ namespace objects {
         public:
         PropertyList(std::vector<Property> properties);
         PropertyList();
+        // Добавляет реквизит
         void add(Property& p);
-
-        private:
         // Вектор реквизитов
         std::vector<Property> mProperties;
     };
