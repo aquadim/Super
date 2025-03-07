@@ -19,7 +19,7 @@ namespace xmltools {
         pugi::xml_node synonymNode = parent.append_child("Synonym");
         addLocalisedString(
             synonymNode,
-            parseLocalisedString(synonym.child("localised-string"))
+            parseLocalisedString(synonym)
         );
     }
     
@@ -70,7 +70,11 @@ namespace xmltools {
 
     std::unordered_map<std::string, std::string> parseLocalisedString(pugi::xml_node node) {
         std::unordered_map<std::string, std::string> output;
-        for (pugi::xml_node lang = node.child("language"); lang; lang = lang.next_sibling("language")) {
+        for (
+            pugi::xml_node lang = node.child("localised-string").child("language");
+            lang;
+            lang = lang.next_sibling("language")
+        ) {
             output[lang.attribute("id").as_string()] = lang.text().get();
         }
         return output;
