@@ -42,8 +42,7 @@ objects::Catalog collectCatalog(pugi::xml_node config) {
         std::string comment     = property.child("comment").text().get();
         typing::Type* type      = xmltools::parseTypeNode(property.child("type"));
 
-        properties.add(objects::Property{propName, propSynonym, comment, type});
-        delete type;
+        properties.add(propName, propSynonym, comment, type);
     }
     
     // Табличные части
@@ -59,7 +58,7 @@ objects::Catalog collectCatalog(pugi::xml_node config) {
         std::string tabularComment  = tabularSection.child("comment").text().get();
 
         // Сбор колонок табличной части
-        std::vector<objects::TabularColumn> tabularColumns{};
+        std::vector<std::shared_ptr<objects::TabularColumn>> tabularColumns{};
         for (
             pugi::xml_node tabularColumn = tabularSection.child("columns").child("column");
             tabularColumn;
@@ -75,14 +74,12 @@ objects::Catalog collectCatalog(pugi::xml_node config) {
                 tabularColumn.child("type")
             );
 
-            tabularColumns.push_back(objects::TabularColumn{
+            tabularColumns.push_back(std::make_shared<objects::TabularColumn>(
                 tabularColName,
                 tabularColSynonym,
                 tabularColComment,
                 tabularColType
-            });
-
-            delete tabularColType;
+            ));
         }
 
         // Добавление табличной части
@@ -95,6 +92,77 @@ objects::Catalog collectCatalog(pugi::xml_node config) {
     }
 
     return objects::Catalog{name, synonym, comment, properties, tabulars};
+}
+
+// Обработка документа
+objects::Document collectDocument(pugi::xml_node config) {
+    std::string name    = config.child("id").text().get();
+    lstring synonym     = xmltools::parseLocalisedString(config.child("synonym"));
+    std::string comment = config.child("comment").text().get();
+
+    // Реквизиты
+    objects::PropertyList properties{};
+    for (
+        pugi::xml_node property = config.child("properties").child("property");
+        property;
+        property = property.next_sibling("property")
+    )
+    {
+        std::string propName    = property.child("id").text().get();
+        lstring propSynonym     = xmltools::parseLocalisedString(property.child("synonym"));
+        std::string comment     = property.child("comment").text().get();
+        typing::Type* type      = xmltools::parseTypeNode(property.child("type"));
+
+        properties.add(propName, propSynonym, comment, type);
+    }
+    
+    // Табличные части
+    objects::TabularsList tabulars{};
+    for (
+        pugi::xml_node tabularSection = config.child("tabular-sections").child("tabular-section");
+        tabularSection;
+        tabularSection = tabularSection.next_sibling("tabular-section")
+    )
+    {
+        std::string tabularName     = tabularSection.child("id").text().get();
+        lstring tabularSynonym      = xmltools::parseLocalisedString(tabularSection.child("synonym"));
+        std::string tabularComment  = tabularSection.child("comment").text().get();
+
+        // Сбор колонок табличной части
+        std::vector<std::shared_ptr<objects::TabularColumn>> tabularColumns{};
+        for (
+            pugi::xml_node tabularColumn = tabularSection.child("columns").child("column");
+            tabularColumn;
+            tabularColumn = tabularColumn.next_sibling("column")
+        )
+        {
+            std::string tabularColName      = tabularColumn.child("id").text().get();
+            lstring tabularColSynonym       = xmltools::parseLocalisedString(
+                tabularColumn.child("synonym")
+            );
+            std::string tabularColComment   = tabularColumn.child("comment").text().get();
+            typing::Type* tabularColType    = xmltools::parseTypeNode(
+                tabularColumn.child("type")
+            );
+
+            tabularColumns.push_back(std::make_shared<objects::TabularColumn>(
+                tabularColName,
+                tabularColSynonym,
+                tabularColComment,
+                tabularColType
+            ));
+        }
+
+        // Добавление табличной части
+        tabulars.add(objects::TabularSection{
+            tabularName,
+            tabularSynonym,
+            tabularComment,
+            tabularColumns
+        });
+    }
+
+    return objects::Document{name, synonym, comment, properties, tabulars};
 }
 
 template <typename T>
@@ -130,6 +198,8 @@ std::vector<T> collectTypes(
 }
 
 int main(int argc, char* argv[]) {
+    spdlog::set_level(spdlog::level::debug);
+    
     // Парсинг аргументов
     argparse::ArgumentParser program("superbuild", "0.0.1");
 
@@ -196,6 +266,28 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Парсинг документов проекта
+    std::vector<objects::Document> documents;
+    try {
+        documents = collectTypes(
+            project.child("documents"),
+            projectPath,
+            "Documents",
+            "document",
+            "Не удалось загрузить файл документа",
+            &collectDocument
+        );
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
+
+    // Файл версий
+    pugi::xml_document versionsDoc;
+    auto configDumpInfo = versionsDoc.append_child("ConfigDumpInfo");
+    configDumpInfo.append_attribute("xmlns").set_value("http://v8.1c.ru/8.3/xcf/dumpinfo");
+    auto configVersions = configDumpInfo.append_child("ConfigVersions");
+
     // Конфигурация
     std::string confName{project.child("id").text().get()};
     lstring confSynonym{
@@ -208,7 +300,10 @@ int main(int argc, char* argv[]) {
         confSynonym,
         confComment,
         languages,
-        catalogs
+        catalogs,
+        documents
     };
     conf.exportToFiles(outputPath);
+    conf.generateConfigVersions(configVersions, "Configuration.");
+    versionsDoc.save_file((outputPath / "ConfigDumpInfo.xml").c_str());
 }

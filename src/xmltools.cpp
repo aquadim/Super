@@ -27,15 +27,16 @@ namespace xmltools {
         addSubNode(parent, "Comment", value);
     }
     
-    void addConfigVersion(
-        pugi::xml_node configVersions,
-        std::string objectName,
-        std::string objectPrefix)
+    pugi::xml_node addConfigVersion(
+        pugi::xml_node parent,
+        std::string name)
     {
-        pugi::xml_node entry = configVersions.append_child("Metadata");
-        entry.append_attribute("name").set_value(objectPrefix + '.' + objectName);
+        pugi::xml_node entry = parent.append_child("Metadata");
+        entry.append_attribute("name").set_value(name);
         entry.append_attribute("id").set_value(ids::getUUID());
         entry.append_attribute("configVersion").set_value(ids::getConfigurationVersionString());
+
+        return entry;
     }
 
     void addChildObject(
@@ -156,5 +157,13 @@ namespace xmltools {
         // Не понимаем что за тип
         std::cerr << "Неизвестный тип " + typeId << std::endl;
         return new typing::Type(typeId);
+    }
+
+    void addTypeNode(pugi::xml_node parent, std::shared_ptr<typing::Type> type) {
+        if (typing::String* t = dynamic_cast<typing::String*>(type.get())) {
+            t->addTypeNode(parent);
+        } else {
+            type->addTypeNode(parent);
+        }
     }
 }

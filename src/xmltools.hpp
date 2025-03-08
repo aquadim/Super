@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include "typing.hpp"
+#include <memory>
 
 namespace xmltools {
 
@@ -24,13 +25,12 @@ namespace xmltools {
     void addCommentNode(pugi::xml_node parent, std::string value);
 
     // Добавляет в узел версий запись об объекте
-    // configVersions - узел версий
+    // parent - родитель
     // objectName - имя объекта
     // objectPrefix - префикс объекта (Catalog, Enum, Language...)
-    void addConfigVersion(
-        pugi::xml_node configVersions,
-        std::string objectName,
-        std::string objectPrefix);
+    pugi::xml_node addConfigVersion(
+        pugi::xml_node parent,
+        std::string name);
 
     // Добавляет в узел детских объектов описание объекта
     // childrenNode - узел <ChildObjects>
@@ -62,6 +62,11 @@ namespace xmltools {
 
     // Парсит тип из узла SUPER
     typing::Type* parseTypeNode(pugi::xml_node node);
+
+    // Добавляет узел <Type>
+    // parent - узел в который нужно добавить <Type>
+    // type - указатель на тип
+    void addTypeNode(pugi::xml_node parent, std::shared_ptr<typing::Type> type);
 }
 
 #endif

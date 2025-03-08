@@ -4,6 +4,7 @@
 // Встроенные типы 1С
 #include <string>
 #include <pugixml.hpp>
+#include <memory>
 
 namespace typing {
 

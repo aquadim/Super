@@ -54,7 +54,7 @@ namespace typing {
         // Длина числа
         qualifiersNode.append_child("v8:Digits").text().set(mLength);
         qualifiersNode.append_child("v8:FractionDigits").text().set(0);
-        qualifiersNode.append_child("v8:AllowedLength").text().set(
+        qualifiersNode.append_child("v8:AllowedSign").text().set(
             mIsOnlyPositive ? "Any" : "Nonnegative"
         );
     }
@@ -74,7 +74,7 @@ namespace typing {
         // Длина числа
         qualifiersNode.append_child("v8:Digits").text().set(mLength);
         qualifiersNode.append_child("v8:FractionDigits").text().set(mFractionLength);
-        qualifiersNode.append_child("v8:AllowedLength").text().set(
+        qualifiersNode.append_child("v8:AllowedSign").text().set(
             mIsOnlyPositive ? "Any" : "Nonnegative"
         );
     }
