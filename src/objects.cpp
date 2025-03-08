@@ -26,6 +26,14 @@ namespace objects {
     std::string ObjectNode::getName() {
         return mName;
     }
+
+    lstring ObjectNode::getSynonym() {
+        return mSynonym;
+    }
+
+    std::string ObjectNode::getComment() {
+        return mComment;
+    }
     //=====================================//
 
     //==========Реквизит==========//
@@ -64,8 +72,18 @@ namespace objects {
         , mType{*type} {}
 
     pugi::xml_node TabularColumn::makeNode(pugi::xml_node md) {
-        auto output = md.append_child("TabularColumn");
-        output.append_attribute("uuid").set_value(ids::getUUID().c_str());
+        auto output   = md.append_child("Attribute");
+        auto colProps = output.append_child("Properties");
+
+        // UUID
+        output.append_attribute("uuid").set_value(ids::getUUID());
+
+        // Имя, синоним, комментарий, тип
+        xmltools::addNameNode(colProps, mName);
+        xmltools::addLocalisedString(colProps.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(colProps, mComment);
+        mType.addTypeNode(colProps);
+
         return output;
     }
     //===========================================//
@@ -87,9 +105,15 @@ namespace objects {
         
         output.append_attribute("uuid").set_value(ids::getUUID().c_str());
 
+        // Свойства табличной части
         xmltools::addNameNode(properties, mName);
         xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
         xmltools::addCommentNode(properties, mComment);
+
+        // Колонки табличной части
+        for (auto col : mColumns) {
+            col.makeNode(children);
+        }
         
         return output;
     }

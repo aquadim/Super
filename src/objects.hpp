@@ -69,7 +69,14 @@ namespace objects {
         // Добавляет и возвращает узел к MetaDataObject
         virtual pugi::xml_node makeNode(pugi::xml_node md) = 0;
 
+        // Возвращает имя объекта
         std::string getName();
+
+        // Возвращает синоним объекта
+        lstring getSynonym();
+
+        // Возвращает комментарий объекта
+        std::string getComment();
         
         protected:
 
