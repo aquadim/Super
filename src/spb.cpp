@@ -286,19 +286,29 @@ int main(int argc, char* argv[]) {
     pugi::xml_document versionsDoc;
     auto configDumpInfo = versionsDoc.append_child("ConfigDumpInfo");
     configDumpInfo.append_attribute("xmlns").set_value("http://v8.1c.ru/8.3/xcf/dumpinfo");
+    configDumpInfo.append_attribute("xmlns:xen").set_value("http://v8.1c.ru/8.3/xcf/enums");
+    configDumpInfo.append_attribute("xmlns:xs").set_value("http://www.w3.org/2001/XMLSchema");
+    configDumpInfo.append_attribute("xmlns:xsi").set_value("http://www.w3.org/2001/XMLSchema-instance");
+    configDumpInfo.append_attribute("format").set_value("Hierarchical");
+    configDumpInfo.append_attribute("version").set_value("2.18");
     auto configVersions = configDumpInfo.append_child("ConfigVersions");
 
     // Конфигурация
-    std::string confName{project.child("id").text().get()};
-    lstring confSynonym{
-        xmltools::parseLocalisedString(project.child("synonym"))
-    };
-    std::string confComment{project.child("comment").text().get()};
+    auto confName = project.child("id").text().get();
+    lstring confSynonym = xmltools::parseLocalisedString(
+        project.child("synonym")
+    );
+    auto confComment = project.child("comment").text().get();
+    auto defaultLanguageName = project.child("default-language").text().get();
     
     objects::Configuration conf{
         confName,
         confSynonym,
         confComment,
+        project.child("vendor").text().get(),
+        project.child("version").text().get(),
+        project.child("update-address").text().get(),
+        defaultLanguageName,
         languages,
         catalogs,
         documents

@@ -363,6 +363,10 @@ namespace objects {
         std::string name,
         lstring synonym,
         std::string comment,
+        std::string vendor,
+        std::string version,
+        std::string updatesAddress,
+        std::string defaultLanguageName,
         std::vector<Language> languages,
         std::vector<Catalog> catalogs,
         std::vector<Document> documents
@@ -370,7 +374,27 @@ namespace objects {
         : ObjectNode{name, synonym, comment}
         , mLanguages{languages}
         , mCatalogs{catalogs}
-        , mDocuments{documents} {}
+        , mDocuments{documents}
+        , mVendor{vendor}
+        , mVersion{version}
+        , mUpdatesAddress{updatesAddress}
+    {
+        // Поиск основного языка
+        int counter = 0;
+        bool found = false;
+        for (auto l : mLanguages) {
+            if (l.getName() == defaultLanguageName) {
+                mDefaultLanguageIndex = counter;
+                found = true;
+                break;
+            }
+            counter++;
+        }
+        if (!found) {
+            spdlog::warn("Не установлен основной язык конфигурации");
+            mDefaultLanguageIndex = 0;
+        }
+    }
 
     void Configuration::exportToFiles(fs::path exportRoot) {
         // Документ конфигурации
@@ -391,7 +415,19 @@ namespace objects {
         this->addContainedObject(internalInfo, "fb282519-d103-4dd3-bc12-cb271d631dfc");
 
         // Обработка Properties
+        // Основные:
         xmltools::addNameNode(properties, mName);
+        xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(properties, mComment);
+
+        // Разработка:
+        properties.append_child("Vendor").text().set(mVendor);
+        properties.append_child("Version").text().set(mVersion);
+        properties.append_child("UpdateCatalogAddress").text().set(mUpdatesAddress);
+
+        // Основной язык
+        auto defLanguage = properties.append_child("DefaultLanguage");
+        defLanguage.text().set("Language." + mLanguages[mDefaultLanguageIndex].getName());
 
         // Языки
         fs::create_directory(exportRoot / "Languages");

@@ -233,6 +233,10 @@ namespace objects {
             std::string name,
             lstring synonym,
             std::string comment,
+            std::string vendor,
+            std::string version,
+            std::string updatesAddress,
+            std::string defaultLanguageName,
             std::vector<Language> languages,
             std::vector<Catalog> catalogs,
             std::vector<Document> documents
@@ -249,6 +253,14 @@ namespace objects {
         std::vector<Catalog> mCatalogs;
         // Список документов
         std::vector<Document> mDocuments;
+        // Поставщик
+        std::string mVendor;
+        // Версия
+        std::string mVersion;
+        // Адрес обновлений
+        std::string mUpdatesAddress;
+        // Индекс основного языка конфигурации в mLanguages
+        int mDefaultLanguageIndex;
     };
 }
 
