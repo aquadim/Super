@@ -63,6 +63,31 @@ namespace objects {
         xmltools::addConfigVersion(parent, prefix + mName);
     }
     //============================//
+    
+    //==========Элемент перечисления==========//
+    EnumElement::EnumElement(
+        std::string name,
+        lstring synonym,
+        std::string comment)
+        : ObjectNode{name, synonym, comment} {}
+
+    pugi::xml_node EnumElement::makeNode(pugi::xml_node md) {
+        auto output = md.append_child("EnumValue");
+        output.append_attribute("uuid").set_value(ids::getUUID().c_str());
+
+        auto outputProps = output.append_child("Properties");
+        xmltools::addNameNode(outputProps, mName);
+        xmltools::addLocalisedString(outputProps.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(outputProps, mComment);
+        
+        return output;
+    }
+
+    void EnumElement::generateConfigVersions(pugi::xml_node parent, std::string prefix) {
+        // prefix = Enum.Пол.
+        xmltools::addConfigVersion(parent, prefix + "EnumValue." + mName);
+    }
+    //========================================//
 
     //==========Колонка табличной части==========//
     TabularColumn::TabularColumn(
@@ -357,6 +382,55 @@ namespace objects {
         mTabulars.addConfigVersionForAll(entry, prefix + mName);
     }
     //============================//
+    
+    //==========Перечисление==========//
+    Enum::Enum(
+        std::string name,
+        lstring synonym,
+        std::string comment,
+        std::vector<std::shared_ptr<EnumElement>> elements
+    )
+        : ObjectNode{name, synonym, comment}
+        , mElements{elements} {}
+
+    void Enum::exportToFiles(fs::path exportRoot) {
+        auto doc = ObjectNode::createDocument();
+        auto obj = this->makeNode(doc.child("MetaDataObject"));
+
+        auto internalInfo   = obj.append_child("InternalInfo");
+        auto properties     = obj.append_child("Properties");
+        auto children       = obj.append_child("ChildObjects");
+
+        // Внутренняя информация
+        xmltools::addGeneratedType(internalInfo, "EnumRef."+mName, "Ref");
+        xmltools::addGeneratedType(internalInfo, "EnumList."+mName, "List");
+        xmltools::addGeneratedType(internalInfo, "EnumManager."+mName, "Manager");
+
+        // Свойства перечисления
+        xmltools::addNameNode(properties, mName);
+        xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(properties, mComment);
+
+        // Элементы перечисления
+        for (const auto& element : mElements) {
+            element->makeNode(children);
+        }
+
+        doc.save_file((exportRoot / "Enums" / (mName + ".xml")).c_str());
+        spdlog::info("Выгружено: перечисление: {}", mName);
+    }
+
+    pugi::xml_node Enum::makeNode(pugi::xml_node md) {
+        auto output = md.append_child("Enum");
+        output.append_attribute("uuid").set_value(ids::getUUID().c_str());
+        return output;
+    }
+
+    void Enum::generateConfigVersions(pugi::xml_node parent, std::string prefix) {
+        // prefix = Enum.
+        xmltools::addConfigVersion(parent, prefix + mName);
+    }
+    //================================//
 
     //==========Конфигурация==========//
     Configuration::Configuration(
@@ -369,12 +443,14 @@ namespace objects {
         std::string defaultLanguageName,
         std::vector<Language> languages,
         std::vector<Catalog> catalogs,
-        std::vector<Document> documents
+        std::vector<Document> documents,
+        std::vector<Enum> enums
     )
         : ObjectNode{name, synonym, comment}
         , mLanguages{languages}
         , mCatalogs{catalogs}
         , mDocuments{documents}
+        , mEnums{enums}
         , mVendor{vendor}
         , mVersion{version}
         , mUpdatesAddress{updatesAddress}
@@ -447,6 +523,12 @@ namespace objects {
             document.exportToFiles(exportRoot);
             children.append_child("Document").text().set(document.getName());
         }
+        // Перечисления
+        fs::create_directory(exportRoot / "Enums");
+        for (auto enumObj : mEnums) {
+            enumObj.exportToFiles(exportRoot);
+            children.append_child("Enum").text().set(enumObj.getName());
+        }
 
         doc.save_file((exportRoot / "Configuration.xml").c_str());
         spdlog::info("Выгружено: конфигурация: {}", mName);
@@ -469,6 +551,8 @@ namespace objects {
             obj.generateConfigVersions(parent, "Catalog.");
         for (auto obj : mDocuments)
             obj.generateConfigVersions(parent, "Document.");
+        for (auto obj : mEnums)
+            obj.generateConfigVersions(parent, "Enum.");
     }
 
     // Добавляет ContainedObject в <InternalInfo> конфигурации

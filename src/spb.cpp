@@ -165,6 +165,32 @@ objects::Document collectDocument(pugi::xml_node config) {
     return objects::Document{name, synonym, comment, properties, tabulars};
 }
 
+// Обработка перечисления
+objects::Enum collectEnum(pugi::xml_node config) {
+    std::string name    = config.child("id").text().get();
+    lstring synonym     = xmltools::parseLocalisedString(config.child("synonym"));
+    std::string comment = config.child("comment").text().get();
+
+    // Элементы
+    std::vector<std::shared_ptr<objects::EnumElement>> elements{};
+    for (
+        pugi::xml_node element = config.child("elements").child("element");
+        element;
+        element = element.next_sibling("element")
+    )
+    {
+        std::string propName    = element.child("id").text().get();
+        lstring propSynonym     = xmltools::parseLocalisedString(element.child("synonym"));
+        std::string propComment = element.child("comment").text().get();
+
+        elements.push_back(
+            std::make_shared<objects::EnumElement>(propName, propSynonym, propComment)
+        );
+    }
+
+    return objects::Enum{name, synonym, comment, elements};
+}
+
 template <typename T>
 std::vector<T> collectTypes(
     pugi::xml_node includes,
@@ -281,6 +307,22 @@ int main(int argc, char* argv[]) {
         std::cerr << e.what() << std::endl;
         return 1;
     }
+    
+    // Парсинг перечислений проекта
+    std::vector<objects::Enum> enums;
+    try {
+        enums = collectTypes(
+            project.child("enums"),
+            projectPath,
+            "Enums",
+            "enum",
+            "Не удалось загрузить файл перечисления",
+            &collectEnum
+        );
+    } catch (const std::runtime_error& e) {
+        std::cerr << e.what() << std::endl;
+        return 1;
+    }
 
     // Файл версий
     pugi::xml_document versionsDoc;
@@ -311,7 +353,8 @@ int main(int argc, char* argv[]) {
         defaultLanguageName,
         languages,
         catalogs,
-        documents
+        documents,
+        enums
     };
     conf.exportToFiles(outputPath);
     conf.generateConfigVersions(configVersions, "Configuration.");

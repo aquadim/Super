@@ -131,6 +131,19 @@ namespace objects {
         // Тип свойства
         std::shared_ptr<typing::Type> mType;
     };
+
+    // Элемент перечисления
+    class EnumElement : public ObjectNode {
+        public:
+        EnumElement(
+            std::string name,
+            lstring synonym,
+            std::string comment
+        );
+        void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
+        pugi::xml_node makeNode(pugi::xml_node md) override;
+        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    };
     
     // Колонка табличной части
     class TabularColumn : public ObjectNode {
@@ -226,6 +239,24 @@ namespace objects {
         TabularsList mTabulars;
     };
 
+    // Перечисление
+    class Enum : public ObjectNode {
+        public:
+        Enum(
+            std::string name,
+            lstring synonym,
+            std::string comment,
+            std::vector<std::shared_ptr<EnumElement>> elements
+        );
+        void exportToFiles(fs::path exportRoot) override;
+        pugi::xml_node makeNode(pugi::xml_node md) override;
+        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+
+        protected:
+        // Список реквизитов
+        std::vector<std::shared_ptr<EnumElement>> mElements;
+    };
+
     // Конфигурация -- корневой узел
     class Configuration : public ObjectNode {
         public:
@@ -239,7 +270,8 @@ namespace objects {
             std::string defaultLanguageName,
             std::vector<Language> languages,
             std::vector<Catalog> catalogs,
-            std::vector<Document> documents
+            std::vector<Document> documents,
+            std::vector<Enum> enums
         );
         void exportToFiles(fs::path exportRoot) override;
         pugi::xml_node makeNode(pugi::xml_node md) override;
@@ -253,6 +285,8 @@ namespace objects {
         std::vector<Catalog> mCatalogs;
         // Список документов
         std::vector<Document> mDocuments;
+        // Список перечисления
+        std::vector<Enum> mEnums;
         // Поставщик
         std::string mVendor;
         // Версия
