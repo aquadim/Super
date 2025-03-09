@@ -1,5 +1,4 @@
-#ifndef OBJECTS_H
-#define OBJECTS_H
+#pragma once
 
 // Классы бизнес-объектов конфигурации
 #include <unordered_map>
@@ -7,9 +6,11 @@
 #include "typing.hpp"
 #include <pugixml.hpp>
 #include <filesystem>
+#include <memory>
 
 // Словарь, где ключ - код языка, а значение - строка на этом языке
-using lstring = std::unordered_map<std::string, std::string>;
+using lstring = unordered_map<string, string>;
+using namespace std;
 
 namespace fs = std::filesystem;
 
@@ -17,285 +18,289 @@ namespace objects {
 
     class Property;
     class TabularSection;
+    class Configuration;
 
     // Список реквизитов
-    class PropertyList {
-        public:
-        PropertyList(std::vector<std::shared_ptr<Property>> properties);
-        PropertyList();
+    //~ class PropertyList {
+        //~ public:
+        //~ PropertyList(vector<shared_ptr<Property>> properties);
+        //~ PropertyList();
 
-        // Добавляет реквизит
-        void add(
-            const std::string& name,
-            lstring synonym,
-            const std::string& comment,
-            typing::Type* type);
+        //~ // Добавляет реквизит
+        //~ void add(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ shared_ptr<typing::Type> type);
 
-        // Добавляет реквизиты в узел parent
-        void addNodesForAll(pugi::xml_node parent);
+        //~ // Добавляет реквизиты в узел parent
+        //~ void addNodesForAll(pugi::xml_node parent);
 
-        void addConfigVersionForAll(
-            pugi::xml_node parent,
-            std::string prefix
-        );
+        //~ void addConfigVersionForAll(
+            //~ pugi::xml_node parent,
+            //~ string prefix
+        //~ );
 
-        // Список реквизитов
-        std::vector<std::shared_ptr<Property>> mProperties;
-    };
+        //~ // Список реквизитов
+        //~ vector<shared_ptr<Property>> mProperties;
+    //~ };
     
     // Список табличных частей
-    class TabularsList {
-        public:
-        TabularsList(std::vector<TabularSection> sections);
-        TabularsList();
+    //~ class TabularsList {
+        //~ public:
+        //~ TabularsList(vector<TabularSection> sections);
+        //~ TabularsList();
 
-        // Добавляет табличную часть
-        void add(TabularSection ts);
+        //~ // Добавляет табличную часть
+        //~ void add(TabularSection ts);
 
-        // Добавляет табличные части в узел parent
-        // prefix - Catalog/Document -- префикс для узлов в InternalInfo
-        // ownerName - имя узла-владельца
-        void addNodesForAll(
-            pugi::xml_node parent,
-            std::string prefix,
-            std::string ownerName
-        );
+        //~ // Добавляет табличные части в узел parent
+        //~ // prefix - Catalog/Document -- префикс для узлов в InternalInfo
+        //~ // ownerName - имя узла-владельца
+        //~ void addNodesForAll(
+            //~ pugi::xml_node parent,
+            //~ string prefix,
+            //~ string ownerName
+        //~ );
 
-        // Список табличных частей
-        std::vector<TabularSection> mTabulars;
+        //~ // Список табличных частей
+        //~ vector<TabularSection> mTabulars;
 
-        void addConfigVersionForAll(
-            pugi::xml_node parent,
-            std::string prefix
-        );
-    };
+        //~ void addConfigVersionForAll(
+            //~ pugi::xml_node parent,
+            //~ string prefix
+        //~ );
+    //~ };
 
     // Узел конфигурации. Может хранить имя, синоним, комментарий
     class ObjectNode {
         public:
         ObjectNode(
-            std::string name,
+            string name,
             lstring synonym,
-            std::string comment
+            string comment,
+            shared_ptr<ObjectNode> parent,
+            string version
         );
         virtual ~ObjectNode() {};
-
         // Экспортирует объект в файл
         // Некоторые объекты (реквизиты, табличные части, ...) могут не
         // реализовывать этот метод
         // exportRoot - путь к каталогу выгрузки
         virtual void exportToFiles(fs::path exportRoot) = 0;
-
         // Создаёт запись в файле ConfigDumpInfo
-        virtual void generateConfigVersions(pugi::xml_node parent, std::string prefix) = 0;
-
+        virtual void generateConfigVersions(pugi::xml_node parent) = 0;
         // Добавляет и возвращает узел к MetaDataObject
         virtual pugi::xml_node makeNode(pugi::xml_node md) = 0;
-
+        // Возвращает полный путь объекта
+        virtual string getQualifiedName() = 0;
         // Возвращает имя объекта
-        std::string getName();
-
+        string getName();
         // Возвращает синоним объекта
         lstring getSynonym();
-
         // Возвращает комментарий объекта
-        std::string getComment();
+        string getComment();
         
         protected:
-
         // Создаёт файл объекта в выгрузке
         pugi::xml_document createDocument();
-        
         // Имя объекта
-        std::string mName;
+        string mName;
         // Синоним
         lstring mSynonym;
         // Комментарий
-        std::string mComment;
+        string mComment;
+        // Родитель объекта
+        shared_ptr<ObjectNode> mParent;
+        // Версия объекта
+        string mVersion;
     };
 
     // Реквизит узла конфигурации
-    class Property : public ObjectNode {
-        public:
-        Property(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            typing::Type* type
-        );
-        void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class Property : public ObjectNode {
+        //~ public:
+        //~ Property(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ shared_ptr<typing::Type> type,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
 
-        protected:
-        // Тип свойства
-        std::shared_ptr<typing::Type> mType;
-    };
+        //~ protected:
+        //~ // Тип свойства
+        //~ shared_ptr<typing::Type> mType;
+    //~ };
 
     // Элемент перечисления
-    class EnumElement : public ObjectNode {
-        public:
-        EnumElement(
-            std::string name,
-            lstring synonym,
-            std::string comment
-        );
-        void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
-    };
+    //~ class EnumElement : public ObjectNode {
+        //~ public:
+        //~ EnumElement(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
+        //~ void generateConfigVersions(pugi::xml_node parent, string prefix) override;
+    //~ };
     
     // Колонка табличной части
-    class TabularColumn : public ObjectNode {
-        public:
-        TabularColumn(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            typing::Type* type
-        );
-        void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class TabularColumn : public ObjectNode {
+        //~ public:
+        //~ TabularColumn(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ shared_ptr<typing::Type> type,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
 
-        protected:
-        // Тип свойства
-        std::shared_ptr<typing::Type> mType;
-    };
+        //~ protected:
+        //~ // Тип свойства
+        //~ shared_ptr<typing::Type> mType;
+    //~ };
 
     // Табличная часть
-    class TabularSection : public ObjectNode {
-        public:
-        TabularSection(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            std::vector<std::shared_ptr<TabularColumn>> columns
-        );
-        void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class TabularSection : public ObjectNode {
+        //~ public:
+        //~ TabularSection(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ vector<shared_ptr<TabularColumn>> columns,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
 
-        protected:
-        std::vector<std::shared_ptr<TabularColumn>> mColumns;
-    };
+        //~ protected:
+        //~ vector<shared_ptr<TabularColumn>> mColumns;
+    //~ };
 
     // Язык
     class Language : public ObjectNode {
         public:
         Language(
-            std::string name,
+            string name,
             lstring synonym,
-            std::string comment,
-            std::string code
+            string comment,
+            string version,
+            string code,
+            shared_ptr<Configuration> parent
         );
         void exportToFiles(fs::path exportRoot) override;
         pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+        string getQualifiedName() override;
+        void generateConfigVersions(pugi::xml_node parent) override;
 
         protected:
-        std::string mCode;
+        string mCode;
     };
     
     // Справочник
-    class Catalog : public ObjectNode {
-        public:
-        Catalog(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            PropertyList properties,
-            TabularsList tabulars
-        );
-        void exportToFiles(fs::path exportRoot) override;
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class Catalog : public ObjectNode {
+        //~ public:
+        //~ Catalog(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ PropertyList properties,
+            //~ TabularsList tabulars,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override;
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
 
-        protected:
-        // Список реквизитов
-        PropertyList mProperties;
-        // Список табличных частей
-        TabularsList mTabulars;
-    };
+        //~ protected:
+        //~ // Список реквизитов
+        //~ PropertyList mProperties;
+        //~ // Список табличных частей
+        //~ TabularsList mTabulars;
+    //~ };
     
     // Документ
-    class Document : public ObjectNode {
-        public:
-        Document(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            PropertyList properties,
-            TabularsList tabulars
-        );
-        void exportToFiles(fs::path exportRoot) override;
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class Document : public ObjectNode {
+        //~ public:
+        //~ Document(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ PropertyList properties,
+            //~ TabularsList tabulars,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override;
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
 
-        protected:
-        // Список реквизитов
-        PropertyList mProperties;
-        // Список табличных частей
-        TabularsList mTabulars;
-    };
+        //~ protected:
+        //~ // Список реквизитов
+        //~ PropertyList mProperties;
+        //~ // Список табличных частей
+        //~ TabularsList mTabulars;
+    //~ };
 
     // Перечисление
-    class Enum : public ObjectNode {
-        public:
-        Enum(
-            std::string name,
-            lstring synonym,
-            std::string comment,
-            std::vector<std::shared_ptr<EnumElement>> elements
-        );
-        void exportToFiles(fs::path exportRoot) override;
-        pugi::xml_node makeNode(pugi::xml_node md) override;
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+    //~ class Enum : public ObjectNode {
+        //~ public:
+        //~ Enum(
+            //~ string name,
+            //~ lstring synonym,
+            //~ string comment,
+            //~ vector<shared_ptr<EnumElement>> elements,
+            //~ shared_ptr<ObjectNode> parent
+        //~ );
+        //~ void exportToFiles(fs::path exportRoot) override;
+        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
 
-        protected:
-        // Список реквизитов
-        std::vector<std::shared_ptr<EnumElement>> mElements;
-    };
+        //~ protected:
+        //~ // Список реквизитов
+        //~ vector<shared_ptr<EnumElement>> mElements;
+    //~ };
 
     // Конфигурация -- корневой узел
     class Configuration : public ObjectNode {
         public:
         Configuration(
-            std::string name,
+            string name,
             lstring synonym,
-            std::string comment,
-            std::string vendor,
-            std::string version,
-            std::string updatesAddress,
-            std::string defaultLanguageName,
-            std::vector<Language> languages,
-            std::vector<Catalog> catalogs,
-            std::vector<Document> documents,
-            std::vector<Enum> enums
+            string comment,
+            string version,
+            string vendor,
+            string devVersion,
+            string updatesAddress,
+            string defaultLanguageName
         );
         void exportToFiles(fs::path exportRoot) override;
         pugi::xml_node makeNode(pugi::xml_node md) override;
-        void addContainedObject(pugi::xml_node parent, std::string uuid);
-        void generateConfigVersions(pugi::xml_node parent, std::string prefix) override;
+        void addContainedObject(pugi::xml_node parent, string uuid);
+        string getQualifiedName() override;
+        void generateConfigVersions(pugi::xml_node parent) override;
+
+        void addLanguage(shared_ptr<Language> l);
 
         protected:
         // Список языков
-        std::vector<Language> mLanguages;
+        vector<shared_ptr<Language>> mLanguages;
         // Список справочников
-        std::vector<Catalog> mCatalogs;
+        //~ vector<Catalog> mCatalogs;
         // Список документов
-        std::vector<Document> mDocuments;
+        //~ vector<Document> mDocuments;
         // Список перечисления
-        std::vector<Enum> mEnums;
+        //~ vector<Enum> mEnums;
         // Поставщик
-        std::string mVendor;
+        string mVendor;
         // Версия
-        std::string mVersion;
+        string mDevVersion;
         // Адрес обновлений
-        std::string mUpdatesAddress;
+        string mUpdatesAddress;
+        // Имя основного языка конфигурации
+        string mDefaultLanguageName;
         // Индекс основного языка конфигурации в mLanguages
         int mDefaultLanguageIndex;
     };
 }
-
-#endif

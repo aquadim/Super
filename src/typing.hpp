@@ -6,22 +6,24 @@
 #include <pugixml.hpp>
 #include <memory>
 
+using namespace std;
+
 namespace typing {
 
     // Не конкретный тип
     class Type {
     public:
-        Type(std::string id);
+        Type(string id);
         virtual void addTypeNode(pugi::xml_node parent);
         virtual ~Type() {};
     protected:
-        std::string mTypeId;
+        string mTypeId;
     };
     
     // Ссылка на что-либо
     class Ref : public Type {
     public:
-        Ref(std::string classId, std::string id);
+        Ref(string classId, string id);
     };
 
     // Тип строка

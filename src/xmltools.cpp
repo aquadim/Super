@@ -1,9 +1,10 @@
 #include "xmltools.hpp"
 #include "ids.hpp"
+#include <spdlog/spdlog.h>
 
 namespace xmltools {
 
-    void addSubNode(pugi::xml_node parent, std::string name, std::string value) {
+    void addSubNode(pugi::xml_node parent, string name, string value) {
         pugi::xml_node nameNode = parent.append_child(name);
         if (value.size() == 0) {
             return;
@@ -11,7 +12,7 @@ namespace xmltools {
         nameNode.text().set(value.c_str());
     }
     
-    void addNameNode(pugi::xml_node parent, std::string value) {
+    void addNameNode(pugi::xml_node parent, string value) {
         addSubNode(parent, "Name", value);
     }
 
@@ -23,26 +24,32 @@ namespace xmltools {
         );
     }
     
-    void addCommentNode(pugi::xml_node parent, std::string value) {
+    void addCommentNode(pugi::xml_node parent, string value) {
         addSubNode(parent, "Comment", value);
     }
     
     pugi::xml_node addConfigVersion(
         pugi::xml_node parent,
-        std::string name)
+        string name,
+        string version)
     {
         pugi::xml_node entry = parent.append_child("Metadata");
         entry.append_attribute("name").set_value(name);
-        entry.append_attribute("id").set_value(ids::getUUID());
-        entry.append_attribute("configVersion").set_value(ids::getConfigurationVersionString());
+        entry.append_attribute("id").set_value(ids::getUUIDFor(name));
+
+        if (version.length() == 0) {
+            entry.append_attribute("configVersion").set_value(ids::getConfigurationVersionString());
+        } else {
+            entry.append_attribute("configVersion").set_value(version);
+        }
 
         return entry;
     }
 
     void addChildObject(
         pugi::xml_node childrenNode,
-        std::string objectName,
-        std::string objectType)
+        string objectName,
+        string objectType)
     {
         pugi::xml_node childNode = childrenNode.append_child(objectType);
         childNode.text().set(objectName.c_str());
@@ -69,8 +76,8 @@ namespace xmltools {
         // TODO: version - ?
     }
 
-    std::unordered_map<std::string, std::string> parseLocalisedString(pugi::xml_node node) {
-        std::unordered_map<std::string, std::string> output;
+    unordered_map<string, string> parseLocalisedString(pugi::xml_node node) {
+        unordered_map<string, string> output;
         for (
             pugi::xml_node lang = node.child("localised-string").child("language");
             lang;
@@ -83,7 +90,7 @@ namespace xmltools {
 
     void addLocalisedString(
         pugi::xml_node node,
-        std::unordered_map<std::string, std::string> langMap
+        unordered_map<string, string> langMap
     )
     {
         for (auto it : langMap) {
@@ -95,8 +102,8 @@ namespace xmltools {
 
     void addGeneratedType(
         pugi::xml_node node,
-        std::string name,
-        std::string category
+        string name,
+        string category
     )
     {
         pugi::xml_node generatedTypeNode = node.append_child("xr:GeneratedType");
@@ -106,20 +113,20 @@ namespace xmltools {
         generatedTypeNode.append_child("xr:ValueId").text().set(ids::getUUID());
     }
 
-    typing::Type* parseTypeNode(pugi::xml_node node) {
-        std::string typeId = node.attribute("id").as_string();
+    shared_ptr<typing::Type> parseTypeNode(pugi::xml_node node) {
+        string typeId = node.attribute("id").as_string();
 
         // Если это строка
         if (typeId == "std::string") {
-            return new typing::String(
+            return dynamic_pointer_cast<typing::Type>(make_shared<typing::String>(
                 node.attribute("length").as_int(),
                 node.attribute("variable").as_bool()
-            );
+            ));
         }
 
         // Если это число
         if (typeId == "std::int") {
-            return new typing::Integer(
+            return make_shared<typing::Integer>(
                 node.attribute("length").as_int(),
                 node.attribute("onlyPositive").as_bool()
             );
@@ -127,7 +134,7 @@ namespace xmltools {
         
         // Если это плавающее
         if (typeId == "std::float") {
-            return new typing::Float(
+            return make_shared<typing::Float>(
                 node.attribute("length").as_int(),
                 node.attribute("fractionLength").as_int(),
                 node.attribute("onlyPositive").as_bool()
@@ -136,11 +143,11 @@ namespace xmltools {
 
         // Получить пространства имён
         // Разделение строки https://stackoverflow.com/a/46931770/15146417
-        std::string delimiter = "::";
+        string delimiter = "::";
         size_t posStart = 0, posEnd, delimLen = delimiter.length();
-        std::string token;
-        std::vector<std::string> tokens;
-        while ((posEnd = typeId.find(delimiter, posStart)) != std::string::npos) {
+        string token;
+        vector<string> tokens;
+        while ((posEnd = typeId.find(delimiter, posStart)) != string::npos) {
             token = typeId.substr(posStart, posEnd - posStart);
             posStart = posEnd + delimLen;
             tokens.push_back(token);
@@ -148,22 +155,14 @@ namespace xmltools {
         tokens.push_back(typeId.substr(posStart));
 
         if (tokens.size() == 3) {
-            // std::???::id
+            // ???::id
             if (tokens[1] == "CatalogRef") {
-                return new typing::Ref("CatalogRef", tokens[2]);
+                return make_shared<typing::Ref>("CatalogRef", tokens[2]);
             }
         }
 
         // Не понимаем что за тип
-        std::cerr << "Неизвестный тип " + typeId << std::endl;
-        return new typing::Type(typeId);
-    }
-
-    void addTypeNode(pugi::xml_node parent, std::shared_ptr<typing::Type> type) {
-        if (typing::String* t = dynamic_cast<typing::String*>(type.get())) {
-            t->addTypeNode(parent);
-        } else {
-            type->addTypeNode(parent);
-        }
+        cerr << "Неизвестный тип " + typeId << endl;
+        return make_shared<typing::Type>(typeId);
     }
 }

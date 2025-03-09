@@ -3,7 +3,7 @@
 namespace typing {
 
     // -- Неконкретный тип -- //
-    Type::Type(std::string id)
+    Type::Type(string id)
         : mTypeId(id)
     {}
     void Type::addTypeNode(pugi::xml_node parent) {
@@ -13,11 +13,11 @@ namespace typing {
     }
     
     // -- Ссылка -- //
-    Ref::Ref(std::string classId, std::string id)
+    Ref::Ref(string classId, string id)
         : Type("cfg:" + classId + "." + id)
     {}
     
-    // -- std::string -- //
+    // -- string -- //
     String::String(int length, bool variable)
         : Type("xs:string")
         , mLength(length)
@@ -38,7 +38,7 @@ namespace typing {
         );
     }
     
-    // -- std::int -- //
+    // -- int -- //
     Integer::Integer(int length, bool onlyPositive)
         : Type("xs:decimal")
         , mLength(length)
@@ -59,7 +59,7 @@ namespace typing {
         );
     }
     
-    // -- std::float -- //
+    // -- float -- //
     Float::Float(int length, int fractionLength, bool onlyPositive)
         : Integer(length, onlyPositive)
         , mFractionLength(fractionLength)
