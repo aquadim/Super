@@ -28,32 +28,52 @@ void collectLanguage(
         synonym,
         comment,
         version,
-        code,
-        conf
+        conf,
+        code
     ));
 }
 
-//~ // Обработка справочника
-//~ objects::Catalog collectCatalog(pugi::xml_node config) {
-    //~ string name     = config.child("id").text().get();
-    //~ lstring synonym = xmltools::parseLocalisedString(config.child("synonym"));
-    //~ string comment  = config.child("comment").text().get();
+// Обработка справочника
+void collectCatalog(
+    pugi::xml_node config,
+    shared_ptr<objects::Configuration> conf
+) {
+    string name     = config.child("id").text().get();
+    lstring synonym = xmltools::parseLocalisedString(config.child("synonym"));
+    string comment  = config.child("comment").text().get();
+    string version  = config.child("version").text().get();
 
-    //~ // Реквизиты
-    //~ objects::PropertyList properties{};
-    //~ for (
-        //~ pugi::xml_node property = config.child("properties").child("property");
-        //~ property;
-        //~ property = property.next_sibling("property")
-    //~ )
-    //~ {
-        //~ string propName                 = property.child("id").text().get();
-        //~ lstring propSynonym             = xmltools::parseLocalisedString(property.child("synonym"));
-        //~ string comment                  = property.child("comment").text().get();
-        //~ shared_ptr<typing::Type> type   = xmltools::parseTypeNode(property.child("type"));
+    auto catalog = make_shared<objects::Catalog>(
+        name,
+        synonym,
+        comment,
+        version,
+        conf
+    );
 
-        //~ properties.add(propName, propSynonym, comment, type);
-    //~ }
+    // Список реквизитов
+    auto propertyList = make_shared<objects::PropertyList>(catalog);
+    for (
+        pugi::xml_node property = config.child("properties").child("property");
+        property;
+        property = property.next_sibling("property")
+    )
+    {
+        propertyList->add(
+            property.child("id").text().get(),
+            xmltools::parseLocalisedString(property.child("synonym")),
+            property.child("comment").text().get(),
+            property.child("version").text().get(),
+            xmltools::parseTypeNode(property.child("type")),
+            conf
+        );
+    }
+
+    catalog->setPropertyList(propertyList);
+
+    conf->addCatalog(catalog);
+
+    
     
     //~ // Табличные части
     //~ objects::TabularsList tabulars{};
@@ -102,7 +122,7 @@ void collectLanguage(
     //~ }
 
     //~ return objects::Catalog{name, synonym, comment, properties, tabulars};
-//~ }
+}
 
 //~ // Обработка документа
 //~ objects::Document collectDocument(pugi::xml_node config) {
@@ -294,21 +314,21 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    //~ // Парсинг справочников проекта
-    //~ vector<objects::Catalog> catalogs;
-    //~ try {
-        //~ catalogs = collectTypes(
-            //~ project.child("catalogs"),
-            //~ projectPath,
-            //~ "Catalogs",
-            //~ "catalog",
-            //~ "Не удалось загрузить файл справочника",
-            //~ &collectCatalog
-        //~ );
-    //~ } catch (const runtime_error& e) {
-        //~ cerr << e.what() << endl;
-        //~ return 1;
-    //~ }
+    // Парсинг справочников проекта
+    try {
+        collectTypes(
+            project.child("catalogs"),
+            projectPath,
+            "Catalogs",
+            "catalog",
+            "Не удалось загрузить файл справочника",
+            conf,
+            &collectCatalog
+        );
+    } catch (const runtime_error& e) {
+        cerr << e.what() << endl;
+        return 1;
+    }
 
     //~ // Парсинг документов проекта
     //~ vector<objects::Document> documents;
