@@ -57,143 +57,139 @@ void collectCatalog(
         pugi::xml_node property = config.child("properties").child("property");
         property;
         property = property.next_sibling("property")
-    )
-    {
-        propertyList->add(
+    ) {
+        auto p = make_shared<objects::Property>(
             property.child("id").text().get(),
             xmltools::parseLocalisedString(property.child("synonym")),
             property.child("comment").text().get(),
             property.child("version").text().get(),
             xmltools::parseTypeNode(property.child("type")),
-            conf
+            catalog
         );
+        propertyList->add(p);
+    }
+
+    // Список табличных частей
+    auto tabularsList = make_shared<objects::TabularsList>(catalog);
+    for (
+        pugi::xml_node ts = config.child("tabular-sections").child("tabular-section");
+        ts;
+        ts = ts.next_sibling("tabular-section")
+    ) {
+        auto tabularSection = make_shared<objects::TabularSection>(
+            ts.child("id").text().get(),
+            xmltools::parseLocalisedString(ts.child("synonym")),
+            ts.child("comment").text().get(),
+            ts.child("version").text().get(),
+            catalog,
+            "Catalog"
+        );
+
+        // Сбор колонок табличной части
+        for (
+            pugi::xml_node tabularColumn = ts.child("columns").child("column");
+            tabularColumn;
+            tabularColumn = tabularColumn.next_sibling("column")
+        ) {
+            auto tabularColType = xmltools::parseTypeNode(tabularColumn.child("type"));
+
+            tabularSection->addColumn(make_shared<objects::TabularColumn>(
+                tabularColumn.child("id").text().get(),
+                xmltools::parseLocalisedString(tabularColumn.child("synonym")),
+                tabularColumn.child("comment").text().get(),
+                tabularColumn.child("version").text().get(),
+                tabularSection,
+                tabularColType
+            ));
+        }
+
+        // Добавление табличной части
+        tabularsList->add(tabularSection);
     }
 
     catalog->setPropertyList(propertyList);
-
+    catalog->setTabularsList(tabularsList);
     conf->addCatalog(catalog);
-
-    
-    
-    //~ // Табличные части
-    //~ objects::TabularsList tabulars{};
-    //~ for (
-        //~ pugi::xml_node tabularSection = config.child("tabular-sections").child("tabular-section");
-        //~ tabularSection;
-        //~ tabularSection = tabularSection.next_sibling("tabular-section")
-    //~ )
-    //~ {
-        //~ string tabularName     = tabularSection.child("id").text().get();
-        //~ lstring tabularSynonym = xmltools::parseLocalisedString(tabularSection.child("synonym"));
-        //~ string tabularComment  = tabularSection.child("comment").text().get();
-
-        //~ // Сбор колонок табличной части
-        //~ vector<shared_ptr<objects::TabularColumn>> tabularColumns{};
-        //~ for (
-            //~ pugi::xml_node tabularColumn = tabularSection.child("columns").child("column");
-            //~ tabularColumn;
-            //~ tabularColumn = tabularColumn.next_sibling("column")
-        //~ )
-        //~ {
-            //~ string tabularColName = tabularColumn.child("id").text().get();
-            //~ lstring tabularColSynonym = xmltools::parseLocalisedString(
-                //~ tabularColumn.child("synonym")
-            //~ );
-            //~ string tabularColComment = tabularColumn.child("comment").text().get();
-            //~ shared_ptr<typing::Type> tabularColType = xmltools::parseTypeNode(
-                //~ tabularColumn.child("type")
-            //~ );
-
-            //~ tabularColumns.push_back(make_shared<objects::TabularColumn>(
-                //~ tabularColName,
-                //~ tabularColSynonym,
-                //~ tabularColComment,
-                //~ tabularColType
-            //~ ));
-        //~ }
-
-        //~ // Добавление табличной части
-        //~ tabulars.add(objects::TabularSection{
-            //~ tabularName,
-            //~ tabularSynonym,
-            //~ tabularComment,
-            //~ tabularColumns
-        //~ });
-    //~ }
-
-    //~ return objects::Catalog{name, synonym, comment, properties, tabulars};
 }
 
-//~ // Обработка документа
-//~ objects::Document collectDocument(pugi::xml_node config) {
-    //~ string name     = config.child("id").text().get();
-    //~ lstring synonym = xmltools::parseLocalisedString(config.child("synonym"));
-    //~ string comment  = config.child("comment").text().get();
+// Обработка справочника
+void collectDocument(
+    pugi::xml_node config,
+    shared_ptr<objects::Configuration> conf
+) {
+    string name     = config.child("id").text().get();
+    lstring synonym = xmltools::parseLocalisedString(config.child("synonym"));
+    string comment  = config.child("comment").text().get();
+    string version  = config.child("version").text().get();
 
-    //~ // Реквизиты
-    //~ objects::PropertyList properties{};
-    //~ for (
-        //~ pugi::xml_node property = config.child("properties").child("property");
-        //~ property;
-        //~ property = property.next_sibling("property")
-    //~ )
-    //~ {
-        //~ string propName                 = property.child("id").text().get();
-        //~ lstring propSynonym             = xmltools::parseLocalisedString(property.child("synonym"));
-        //~ string comment                  = property.child("comment").text().get();
-        //~ shared_ptr<typing::Type> type   = xmltools::parseTypeNode(property.child("type"));
+    auto document = make_shared<objects::Document>(
+        name,
+        synonym,
+        comment,
+        version,
+        conf
+    );
 
-        //~ properties.add(propName, propSynonym, comment, type);
-    //~ }
-    
-    //~ // Табличные части
-    //~ objects::TabularsList tabulars{};
-    //~ for (
-        //~ pugi::xml_node tabularSection = config.child("tabular-sections").child("tabular-section");
-        //~ tabularSection;
-        //~ tabularSection = tabularSection.next_sibling("tabular-section")
-    //~ )
-    //~ {
-        //~ string tabularName      = tabularSection.child("id").text().get();
-        //~ lstring tabularSynonym  = xmltools::parseLocalisedString(tabularSection.child("synonym"));
-        //~ string tabularComment   = tabularSection.child("comment").text().get();
+    // Список реквизитов
+    auto propertyList = make_shared<objects::PropertyList>(document);
+    for (
+        pugi::xml_node property = config.child("properties").child("property");
+        property;
+        property = property.next_sibling("property")
+    ) {
+        auto p = make_shared<objects::Property>(
+            property.child("id").text().get(),
+            xmltools::parseLocalisedString(property.child("synonym")),
+            property.child("comment").text().get(),
+            property.child("version").text().get(),
+            xmltools::parseTypeNode(property.child("type")),
+            document
+        );
+        propertyList->add(p);
+    }
 
-        //~ // Сбор колонок табличной части
-        //~ vector<shared_ptr<objects::TabularColumn>> tabularColumns{};
-        //~ for (
-            //~ pugi::xml_node tabularColumn = tabularSection.child("columns").child("column");
-            //~ tabularColumn;
-            //~ tabularColumn = tabularColumn.next_sibling("column")
-        //~ )
-        //~ {
-            //~ string tabularColName = tabularColumn.child("id").text().get();
-            //~ lstring tabularColSynonym = xmltools::parseLocalisedString(
-                //~ tabularColumn.child("synonym")
-            //~ );
-            //~ string tabularColComment = tabularColumn.child("comment").text().get();
-            //~ shared_ptr<typing::Type> tabularColType = xmltools::parseTypeNode(
-                //~ tabularColumn.child("type")
-            //~ );
+    // Список табличных частей
+    auto tabularsList = make_shared<objects::TabularsList>(document);
+    for (
+        pugi::xml_node ts = config.child("tabular-sections").child("tabular-section");
+        ts;
+        ts = ts.next_sibling("tabular-section")
+    ) {
+        auto tabularSection = make_shared<objects::TabularSection>(
+            ts.child("id").text().get(),
+            xmltools::parseLocalisedString(ts.child("synonym")),
+            ts.child("comment").text().get(),
+            ts.child("version").text().get(),
+            document,
+            "Document"
+        );
 
-            //~ tabularColumns.push_back(make_shared<objects::TabularColumn>(
-                //~ tabularColName,
-                //~ tabularColSynonym,
-                //~ tabularColComment,
-                //~ tabularColType
-            //~ ));
-        //~ }
+        // Сбор колонок табличной части
+        for (
+            pugi::xml_node tabularColumn = ts.child("columns").child("column");
+            tabularColumn;
+            tabularColumn = tabularColumn.next_sibling("column")
+        ) {
+            auto tabularColType = xmltools::parseTypeNode(tabularColumn.child("type"));
 
-        //~ // Добавление табличной части
-        //~ tabulars.add(objects::TabularSection{
-            //~ tabularName,
-            //~ tabularSynonym,
-            //~ tabularComment,
-            //~ tabularColumns
-        //~ });
-    //~ }
+            tabularSection->addColumn(make_shared<objects::TabularColumn>(
+                tabularColumn.child("id").text().get(),
+                xmltools::parseLocalisedString(tabularColumn.child("synonym")),
+                tabularColumn.child("comment").text().get(),
+                tabularColumn.child("version").text().get(),
+                tabularSection,
+                tabularColType
+            ));
+        }
 
-    //~ return objects::Document{name, synonym, comment, properties, tabulars};
-//~ }
+        // Добавление табличной части
+        tabularsList->add(tabularSection);
+    }
+
+    document->setPropertyList(propertyList);
+    document->setTabularsList(tabularsList);
+    conf->addDocument(document);
+}
 
 //~ // Обработка перечисления
 //~ objects::Enum collectEnum(pugi::xml_node config) {
@@ -330,21 +326,21 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    //~ // Парсинг документов проекта
-    //~ vector<objects::Document> documents;
-    //~ try {
-        //~ documents = collectTypes(
-            //~ project.child("documents"),
-            //~ projectPath,
-            //~ "Documents",
-            //~ "document",
-            //~ "Не удалось загрузить файл документа",
-            //~ &collectDocument
-        //~ );
-    //~ } catch (const runtime_error& e) {
-        //~ cerr << e.what() << endl;
-        //~ return 1;
-    //~ }
+    // Парсинг документов проекта
+    try {
+        collectTypes(
+            project.child("documents"),
+            projectPath,
+            "Documents",
+            "document",
+            "Не удалось загрузить файл документа",
+            conf,
+            &collectDocument
+        );
+    } catch (const runtime_error& e) {
+        cerr << e.what() << endl;
+        return 1;
+    }
     
     //~ // Парсинг перечислений проекта
     //~ vector<objects::Enum> enums;

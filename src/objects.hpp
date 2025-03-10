@@ -27,19 +27,10 @@ namespace objects {
         public:
         PropertyList(shared_ptr<ObjectNode> parent);
         // Добавляет реквизит
-        void add(
-            string name,
-            lstring synonym,
-            string comment,
-            string version,
-            shared_ptr<typing::Type> type,
-            shared_ptr<ObjectNode> parent
-        );
+        void add(shared_ptr<Property> p);
         // Добавляет реквизиты в узел parent
         void addNodesForAll(pugi::xml_node parent);
-        void addConfigVersionForAll(
-            pugi::xml_node parent
-        );
+        void addConfigVersionForAll(pugi::xml_node parent);
         
         private:
         // Список реквизитов
@@ -47,33 +38,23 @@ namespace objects {
         // Владелец реквизитов
         shared_ptr<ObjectNode> mParent;
     };
-    
+
     // Список табличных частей
-    //~ class TabularsList {
-        //~ public:
-        //~ TabularsList(vector<TabularSection> sections);
-        //~ TabularsList();
-
-        //~ // Добавляет табличную часть
-        //~ void add(TabularSection ts);
-
-        //~ // Добавляет табличные части в узел parent
-        //~ // prefix - Catalog/Document -- префикс для узлов в InternalInfo
-        //~ // ownerName - имя узла-владельца
-        //~ void addNodesForAll(
-            //~ pugi::xml_node parent,
-            //~ string prefix,
-            //~ string ownerName
-        //~ );
-
-        //~ // Список табличных частей
-        //~ vector<TabularSection> mTabulars;
-
-        //~ void addConfigVersionForAll(
-            //~ pugi::xml_node parent,
-            //~ string prefix
-        //~ );
-    //~ };
+    class TabularsList {
+        public:
+        TabularsList(shared_ptr<ObjectNode> parent);
+        // Добавляет табличную часть
+        void add(shared_ptr<TabularSection> ts);
+        // Добавляет реквизиты в узел parent
+        void addNodesForAll(pugi::xml_node parent);
+        void addConfigVersionForAll(pugi::xml_node parent);
+        
+        private:
+        // Список табличных частей
+        vector<shared_ptr<TabularSection>> mTabulars;
+        // Владелец табличных частей
+        shared_ptr<ObjectNode> mParent;
+    };
 
     // Узел конфигурации. Может хранить имя, синоним, комментарий
     class ObjectNode {
@@ -154,38 +135,49 @@ namespace objects {
     //~ };
     
     // Колонка табличной части
-    //~ class TabularColumn : public ObjectNode {
-        //~ public:
-        //~ TabularColumn(
-            //~ string name,
-            //~ lstring synonym,
-            //~ string comment,
-            //~ shared_ptr<typing::Type> type,
-            //~ shared_ptr<ObjectNode> parent
-        //~ );
-        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
+    class TabularColumn : public ObjectNode {
+        public:
+        TabularColumn(
+            string name,
+            lstring synonym,
+            string comment,
+            string version,
+            shared_ptr<TabularSection> parent,
+            shared_ptr<typing::Type> type
+        );
+        void exportToFiles(fs::path exportRoot) override;
+        pugi::xml_node makeNode(pugi::xml_node md) override;
+        string getQualifiedName() override;
+        void generateConfigVersions(pugi::xml_node parent) override;
 
-        //~ protected:
-        //~ // Тип свойства
-        //~ shared_ptr<typing::Type> mType;
-    //~ };
+        protected:
+        shared_ptr<typing::Type> mType;
+    };
 
     // Табличная часть
-    //~ class TabularSection : public ObjectNode {
-        //~ public:
-        //~ TabularSection(
-            //~ string name,
-            //~ lstring synonym,
-            //~ string comment,
-            //~ vector<shared_ptr<TabularColumn>> columns,
-            //~ shared_ptr<ObjectNode> parent
-        //~ );
-        //~ void exportToFiles(fs::path exportRoot) override { (void)exportRoot; }
-        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
+    class TabularSection : public ObjectNode {
+        public:
+        TabularSection(
+            string name,
+            lstring synonym,
+            string comment,
+            string version,
+            shared_ptr<ObjectNode> parent,
+            string generatedTypePrefix
+        );
+        void exportToFiles(fs::path exportRoot) override;
+        pugi::xml_node makeNode(pugi::xml_node md) override;
+        string getQualifiedName() override;
+        void generateConfigVersions(pugi::xml_node parent) override;
 
-        //~ protected:
-        //~ vector<shared_ptr<TabularColumn>> mColumns;
-    //~ };
+        void addColumn(shared_ptr<TabularColumn> column);
+
+        protected:
+        // Колонки ТЧ
+        vector<shared_ptr<TabularColumn>> mColumns;
+        // префикс для <GeneratedType>
+        string mGeneratedTypePrefix;
+    };
 
     // Язык
     class Language : public ObjectNode {
@@ -207,29 +199,6 @@ namespace objects {
         string mCode;
     };
     
-    
-    
-    // Документ
-    //~ class Document : public ObjectNode {
-        //~ public:
-        //~ Document(
-            //~ string name,
-            //~ lstring synonym,
-            //~ string comment,
-            //~ PropertyList properties,
-            //~ TabularsList tabulars,
-            //~ shared_ptr<ObjectNode> parent
-        //~ );
-        //~ void exportToFiles(fs::path exportRoot) override;
-        //~ pugi::xml_node makeNode(pugi::xml_node md) override;
-
-        //~ protected:
-        //~ // Список реквизитов
-        //~ PropertyList mProperties;
-        //~ // Список табличных частей
-        //~ TabularsList mTabulars;
-    //~ };
-
     // Перечисление
     //~ class Enum : public ObjectNode {
         //~ public:
@@ -248,6 +217,31 @@ namespace objects {
         //~ vector<shared_ptr<EnumElement>> mElements;
     //~ };
 
+    // Документ
+    class Document : public ObjectNode {
+        public:
+        Document(
+            string name,
+            lstring synonym,
+            string comment,
+            string version,
+            shared_ptr<Configuration> parent
+        );
+        void exportToFiles(fs::path exportRoot) override;
+        pugi::xml_node makeNode(pugi::xml_node md) override;
+        string getQualifiedName() override;
+        void generateConfigVersions(pugi::xml_node parent) override;
+
+        void setPropertyList(shared_ptr<PropertyList> properties);
+        void setTabularsList(shared_ptr<TabularsList> tabulars);
+
+        protected:
+        // Список реквизитов
+        shared_ptr<PropertyList> mProperties;
+        // Список ТЧ
+        shared_ptr<TabularsList> mTabulars;
+    };
+    
     // Справочник
     class Catalog : public ObjectNode {
         public:
@@ -264,10 +258,13 @@ namespace objects {
         void generateConfigVersions(pugi::xml_node parent) override;
 
         void setPropertyList(shared_ptr<PropertyList> properties);
+        void setTabularsList(shared_ptr<TabularsList> tabulars);
 
         protected:
         // Список реквизитов
         shared_ptr<PropertyList> mProperties;
+        // Список ТЧ
+        shared_ptr<TabularsList> mTabulars;
     };
 
     // Конфигурация -- корневой узел
@@ -290,6 +287,7 @@ namespace objects {
 
         void addLanguage(shared_ptr<Language> l);
         void addCatalog(shared_ptr<Catalog> c);
+        void addDocument(shared_ptr<Document> d);
         void addContainedObject(pugi::xml_node parent, string uuid);
 
         protected:
@@ -298,7 +296,7 @@ namespace objects {
         // Список справочников
         vector<shared_ptr<Catalog>> mCatalogs;
         // Список документов
-        //~ vector<Document> mDocuments;
+        vector<shared_ptr<Document>> mDocuments;
         // Список перечисления
         //~ vector<Enum> mEnums;
         // Поставщик

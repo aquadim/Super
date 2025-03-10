@@ -102,70 +102,114 @@ namespace objects {
     //========================================//
 
     //==========Колонка табличной части==========//
-    //~ TabularColumn::TabularColumn(
-        //~ std::string name,
-        //~ lstring synonym,
-        //~ std::string comment,
-        //~ shared_ptr<typing::Type> type)
-        //~ : ObjectNode{name, synonym, comment}
-        //~ , mType{type} {}
+    TabularColumn::TabularColumn(
+        string name,
+        lstring synonym,
+        string comment,
+        string version,
+        shared_ptr<TabularSection> parent,
+        shared_ptr<typing::Type> type)
+        : ObjectNode{name, synonym, comment, version, parent}
+        , mType{type} {}
 
-    //~ pugi::xml_node TabularColumn::makeNode(pugi::xml_node md) {
-        //~ auto output   = md.append_child("Attribute");
-        //~ auto colProps = output.append_child("Properties");
+    void TabularColumn::exportToFiles(fs::path exportRoot) {
+        (void)exportRoot;
+    }
 
-        //~ output.append_attribute("uuid").set_value(ids::getUUID());
+    pugi::xml_node TabularColumn::makeNode(pugi::xml_node md) {
+        auto output   = md.append_child("Attribute");
+        auto colProps = output.append_child("Properties");
 
-        //~ xmltools::addNameNode(colProps, mName);
-        //~ xmltools::addLocalisedString(colProps.append_child("Synonym"), mSynonym);
-        //~ xmltools::addCommentNode(colProps, mComment);
-        //~ mType->addTypeNode(colProps);
+        output.append_attribute("uuid").set_value(ids::getUUIDFor(getQualifiedName()));
 
-        //~ return output;
-    //~ }
+        xmltools::addNameNode(colProps, mName);
+        xmltools::addLocalisedString(colProps.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(colProps, mComment);
+        mType->addTypeNode(colProps);
 
-    //~ void TabularColumn::generateConfigVersions(pugi::xml_node parent, std::string prefix) {
-        //~ xmltools::addConfigVersion(parent, prefix + ".Attribute." + mName);
-    //~ }
+        return output;
+    }
+    
+    string TabularColumn::getQualifiedName() {
+        return mParent->getQualifiedName() + ".Attribute." + mName;
+    }
+
+    void TabularColumn::generateConfigVersions(pugi::xml_node parent) {
+        xmltools::addConfigVersion(
+            parent,
+            getQualifiedName(),
+            mVersion
+        );
+    }
     //===========================================//
 
     //==========Табличная часть==========//
-    //~ TabularSection::TabularSection(
-        //~ std::string name,
-        //~ lstring synonym,
-        //~ std::string comment,
-        //~ std::vector<std::shared_ptr<TabularColumn>> columns)
-        //~ : ObjectNode{name, synonym, comment}
-        //~ , mColumns{columns} {}
+    TabularSection::TabularSection(
+        string name,
+        lstring synonym,
+        string comment,
+        string version,
+        shared_ptr<ObjectNode> parent,
+        string generatedTypePrefix)
+        : ObjectNode{name, synonym, comment, version, parent}
+        , mColumns{}
+        , mGeneratedTypePrefix{generatedTypePrefix} {}
+    
+    void TabularSection::exportToFiles(fs::path exportRoot) {
+        (void)exportRoot;
+    }
 
-    //~ pugi::xml_node TabularSection::makeNode(pugi::xml_node md) {
-        //~ auto output         = md.append_child("TabularSection");
-        //~ output.append_child("InternalInfo");
-        //~ auto properties     = output.append_child("Properties");
-        //~ auto children       = output.append_child("ChildObjects");
+    pugi::xml_node TabularSection::makeNode(pugi::xml_node md) {
+        auto output         = md.append_child("TabularSection");
+        output.append_attribute("uuid").set_value(ids::getUUIDFor(getQualifiedName()));
+
+        auto internalInfo   = output.append_child("InternalInfo");
+        auto properties     = output.append_child("Properties");
+        auto children       = output.append_child("ChildObjects");
+
+        // InternalInfo
+        xmltools::addGeneratedType(
+            internalInfo,
+            mGeneratedTypePrefix + "TabularSection." + mParent->getName() + "." + mName,
+            "TabularSection"
+        );
+        xmltools::addGeneratedType(
+            internalInfo,
+            mGeneratedTypePrefix + "TabularSectionRow." + mParent->getName() + "." + mName,
+            "TabularSectionRow"
+        );
+
+        // Свойства табличной части
+        xmltools::addNameNode(properties, mName);
+        xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(properties, mComment);
+
+        // Колонки табличной части
+        for (auto col : mColumns) {
+            col->makeNode(children);
+        }
         
-        //~ output.append_attribute("uuid").set_value(ids::getUUID().c_str());
+        return output;
+    }
 
-        //~ // Свойства табличной части
-        //~ xmltools::addNameNode(properties, mName);
-        //~ xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
-        //~ xmltools::addCommentNode(properties, mComment);
+    string TabularSection::getQualifiedName() {
+        return mParent->getQualifiedName() + ".TabularSection." + mName;
+    }
 
-        //~ // Колонки табличной части
-        //~ for (auto col : mColumns) {
-            //~ col->makeNode(children);
-        //~ }
-        
-        //~ return output;
-    //~ }
+    void TabularSection::generateConfigVersions(pugi::xml_node parent) {
+        xmltools::addConfigVersion(
+            parent,
+            getQualifiedName(),
+            mVersion
+        );
+        for (auto col : mColumns) {
+            col->generateConfigVersions(parent);
+        }
+    }
 
-    //~ void TabularSection::generateConfigVersions(pugi::xml_node parent, std::string prefix) {
-        //~ // prefix = Catalog.Номенклатура
-        //~ xmltools::addConfigVersion(parent, prefix + ".TabularSection." + mName);
-        //~ for (const auto& col : mColumns) {
-            //~ col->generateConfigVersions(parent, prefix + ".TabularSection." + mName);
-        //~ }
-    //~ }
+    void TabularSection::addColumn(shared_ptr<TabularColumn> column) {
+        mColumns.push_back(column);
+    }
     //===================================//
 
     //==========Список реквизитов==========//
@@ -173,17 +217,9 @@ namespace objects {
         : mProperties{}
         , mParent{parent} {}
 
-    void PropertyList::add(
-        string name,
-        lstring synonym,
-        string comment,
-        string version,
-        shared_ptr<typing::Type> type,
-        shared_ptr<ObjectNode> parent
+    void PropertyList::add(shared_ptr<Property> p
     ) {
-        mProperties.push_back(
-            std::make_shared<Property>(name, synonym, comment, version, type, parent)
-        );
+        mProperties.push_back(p);
     }
 
     void PropertyList::addNodesForAll(pugi::xml_node parent) {
@@ -202,49 +238,29 @@ namespace objects {
     //=====================================//
 
     //==========Список табличных частей==========//
-    //~ TabularsList::TabularsList(std::vector<TabularSection> tabulars)
-        //~ : mTabulars{tabulars} {}
+    TabularsList::TabularsList(shared_ptr<ObjectNode> parent)
+        : mTabulars{}
+        , mParent{parent} {}
 
-    //~ TabularsList::TabularsList()
-        //~ : mTabulars{std::vector<TabularSection>{}} {}
+    void TabularsList::add(shared_ptr<TabularSection> ts) {
+        mTabulars.push_back(ts);
+    }
 
-    //~ void TabularsList::add(TabularSection ts) {
-        //~ mTabulars.push_back(ts);
-    //~ }
+    void TabularsList::addNodesForAll(
+        pugi::xml_node parent
+    ) {
+        for (auto ts : mTabulars) {
+            ts->makeNode(parent);
+        }
+    }
 
-    //~ void TabularsList::addNodesForAll(
-        //~ pugi::xml_node parent,
-        //~ std::string prefix,
-        //~ std::string ownerName
-    //~ )
-    //~ {
-        //~ for (auto ts : mTabulars) {
-            //~ auto node = ts.makeNode(parent);
-
-            //~ // Заполнение InternalInfo
-            //~ auto internalInfo = node.child("InternalInfo");
-            //~ xmltools::addGeneratedType(
-                //~ internalInfo,
-                //~ prefix + "TabularSection." + ownerName + "." + ts.getName(),
-                //~ "TabularSection"
-            //~ );
-            //~ xmltools::addGeneratedType(
-                //~ internalInfo,
-                //~ prefix + "TabularSectionRow." + ownerName + "." + ts.getName(),
-                //~ "TabularSectionRow"
-            //~ );
-        //~ }
-    //~ }
-
-    //~ void TabularsList::addConfigVersionForAll(
-        //~ pugi::xml_node parent,
-        //~ std::string prefix
-    //~ ) {
-        //~ // prefix = Catalog.Номенклатура
-        //~ for (auto ts : mTabulars) {
-            //~ ts.generateConfigVersions(parent, prefix);
-        //~ }
-    //~ }
+    void TabularsList::addConfigVersionForAll(
+        pugi::xml_node parent
+    ) {
+        for (auto ts : mTabulars) {
+            ts->generateConfigVersions(parent);
+        }
+    }
     //===========================================//
 
     //==========Язык==========//
@@ -288,6 +304,71 @@ namespace objects {
     }
     //========================//
 
+    //==========Документ==========//
+    Document::Document(
+        string name,
+        lstring synonym,
+        string comment,
+        string version,
+        shared_ptr<Configuration> parent
+    )
+        : ObjectNode{name, synonym, comment, version, parent } {}
+
+    string Document::getQualifiedName() {
+        return "Document." + mName;
+    }
+
+    void Document::exportToFiles(fs::path exportRoot) {
+        auto doc    = ObjectNode::createDocument();
+        auto obj    = this->makeNode(doc.child("MetaDataObject"));
+        
+        auto internalInfo   = obj.append_child("InternalInfo");
+        auto properties     = obj.append_child("Properties");
+        auto children       = obj.append_child("ChildObjects");
+
+        // Внутренняя информация
+        xmltools::addGeneratedType(internalInfo, "DocumentObject."+mName, "Object");
+        xmltools::addGeneratedType(internalInfo, "DocumentRef."+mName, "Ref");
+        xmltools::addGeneratedType(internalInfo, "DocumentSelection."+mName, "Selection");
+        xmltools::addGeneratedType(internalInfo, "DocumentList."+mName, "List");
+        xmltools::addGeneratedType(internalInfo, "DocumentManager."+mName, "Manager");
+
+        // Свойства
+        xmltools::addNameNode(properties, mName);
+        xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
+        xmltools::addCommentNode(properties, mComment);
+
+        // Реквизиты
+        mProperties->addNodesForAll(children);
+
+        // Табличные части
+        mTabulars->addNodesForAll(children);
+
+        doc.save_file((exportRoot / "Documents" / (mName + ".xml")).c_str());
+        spdlog::info("Выгружено: документ: {}", mName);
+    }
+
+    pugi::xml_node Document::makeNode(pugi::xml_node md) {
+        auto output = md.append_child("Document");
+        output.append_attribute("uuid").set_value(ids::getUUIDFor(getQualifiedName()));
+        return output;
+    }
+
+    void Document::generateConfigVersions(pugi::xml_node parent) {
+        xmltools::addConfigVersion(parent, getQualifiedName(), mVersion);
+        mProperties->addConfigVersionForAll(parent);
+        mTabulars->addConfigVersionForAll(parent);
+    }
+
+    void Document::setPropertyList(shared_ptr<PropertyList> properties) {
+        mProperties = properties;
+    }
+
+    void Document::setTabularsList(shared_ptr<TabularsList> tabulars) {
+        mTabulars = tabulars;
+    }
+    //==============================//
+
     //==========Справочник==========//
     Catalog::Catalog(
         string name,
@@ -325,6 +406,9 @@ namespace objects {
         // Реквизиты
         mProperties->addNodesForAll(children);
 
+        // Табличные части
+        mTabulars->addNodesForAll(children);
+
         doc.save_file((exportRoot / "Catalogs" / (mName + ".xml")).c_str());
         spdlog::info("Выгружено: справочник: {}", mName);
     }
@@ -338,67 +422,17 @@ namespace objects {
     void Catalog::generateConfigVersions(pugi::xml_node parent) {
         xmltools::addConfigVersion(parent, getQualifiedName(), mVersion);
         mProperties->addConfigVersionForAll(parent);
+        mTabulars->addConfigVersionForAll(parent);
     }
 
     void Catalog::setPropertyList(shared_ptr<PropertyList> properties) {
         mProperties = properties;
     }
+
+    void Catalog::setTabularsList(shared_ptr<TabularsList> tabulars) {
+        mTabulars = tabulars;
+    }
     //==============================//
-    
-    //==========Документ==========//
-    //~ Document::Document(
-        //~ std::string name,
-        //~ lstring synonym,
-        //~ std::string comment,
-        //~ PropertyList properties,
-        //~ TabularsList tabulars
-    //~ )
-        //~ : ObjectNode{name, synonym, comment}
-        //~ , mProperties{properties}
-        //~ , mTabulars{tabulars} {}
-
-    //~ void Document::exportToFiles(fs::path exportRoot) {
-        //~ auto doc = ObjectNode::createDocument();
-        //~ auto obj = this->makeNode(doc.child("MetaDataObject"));
-
-        //~ auto internalInfo   = obj.append_child("InternalInfo");
-        //~ auto properties     = obj.append_child("Properties");
-        //~ auto children       = obj.append_child("ChildObjects");
-
-        //~ // Внутренняя информация
-        //~ xmltools::addGeneratedType(internalInfo, "DocumentObject."+mName, "Object");
-        //~ xmltools::addGeneratedType(internalInfo, "DocumentRef."+mName, "Ref");
-        //~ xmltools::addGeneratedType(internalInfo, "DocumentSelection."+mName, "Selection");
-        //~ xmltools::addGeneratedType(internalInfo, "DocumentList."+mName, "List");
-        //~ xmltools::addGeneratedType(internalInfo, "DocumentManager."+mName, "Manager");
-
-        //~ // Свойства документа
-        //~ xmltools::addNameNode(properties, mName);
-        //~ xmltools::addLocalisedString(properties.append_child("Synonym"), mSynonym);
-        //~ xmltools::addCommentNode(properties, mComment);
-
-        //~ // Реквизиты
-        //~ mProperties.addNodesForAll(children);
-
-        //~ // Табличные части
-        //~ mTabulars.addNodesForAll(children, "Document", mName);
-
-        //~ doc.save_file((exportRoot / "Documents" / (mName + ".xml")).c_str());
-        //~ spdlog::info("Выгружено: документ: {}", mName);
-    //~ }
-
-    //~ pugi::xml_node Document::makeNode(pugi::xml_node md) {
-        //~ auto output = md.append_child("Document");
-        //~ output.append_attribute("uuid").set_value(ids::getUUID().c_str());
-        //~ return output;
-    //~ }
-
-    //~ void Document::generateConfigVersions(pugi::xml_node parent, std::string prefix) {
-        //~ auto entry = xmltools::addConfigVersion(parent, prefix + mName);
-        //~ mProperties.addConfigVersionForAll(entry, prefix + mName);
-        //~ mTabulars.addConfigVersionForAll(entry, prefix + mName);
-    //~ }
-    //============================//
     
     //==========Перечисление==========//
     //~ Enum::Enum(
@@ -485,6 +519,10 @@ namespace objects {
     void Configuration::addCatalog(shared_ptr<Catalog> c) {
         mCatalogs.push_back(c);
     }
+    
+    void Configuration::addDocument(shared_ptr<Document> d) {
+        mDocuments.push_back(d);
+    }
 
     void Configuration::exportToFiles(fs::path exportRoot) {
         // Документ конфигурации
@@ -531,12 +569,12 @@ namespace objects {
             catalog->exportToFiles(exportRoot);
             children.append_child("Catalog").text().set(catalog->getName());
         }
-        // Документы
-        //~ fs::create_directory(exportRoot / "Documents");
-        //~ for (auto document : mDocuments) {
-            //~ document.exportToFiles(exportRoot);
-            //~ children.append_child("Document").text().set(document.getName());
-        //~ }
+        // Справочники
+        fs::create_directory(exportRoot / "Documents");
+        for (auto doc : mDocuments) {
+            doc->exportToFiles(exportRoot);
+            children.append_child("Document").text().set(doc->getName());
+        }
         // Перечисления
         //~ fs::create_directory(exportRoot / "Enums");
         //~ for (auto enumObj : mEnums) {
@@ -563,8 +601,8 @@ namespace objects {
             obj->generateConfigVersions(parent);
         for (auto obj : mCatalogs)
             obj->generateConfigVersions(parent);
-        //~ for (auto obj : mDocuments)
-            //~ obj.generateConfigVersions(parent, "Document.");
+        for (auto obj : mDocuments)
+            obj->generateConfigVersions(parent);
         //~ for (auto obj : mEnums)
             //~ obj.generateConfigVersions(parent, "Enum.");
     }
